@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
-
 namespace Ocelot.JwtAuthorize
 {
     /// <summary>
@@ -15,6 +14,7 @@ namespace Ocelot.JwtAuthorize
         /// JwtAuthorizationRequirement
         /// </summary>
         readonly JwtAuthorizationRequirement _jwtAuthorizationRequirement;
+
         /// <summary>
         /// ctor
         /// </summary>
@@ -23,6 +23,7 @@ namespace Ocelot.JwtAuthorize
         {
             _jwtAuthorizationRequirement = jwtAuthorizationRequirement;
         }
+
         /// <summary>
         /// get the token of jwt
         /// </summary>
@@ -31,8 +32,52 @@ namespace Ocelot.JwtAuthorize
         /// <returns></returns>
         public Token BuildJwtToken(Claim[] claims, DateTime? expires = null)
         {
+            return GenerateToken(claims, null, expires, null);
+        }
+
+        /// <summary>
+        /// get the token of jwt
+        /// </summary>
+        /// <param name="claims">claim array</param>
+        /// <param name="notBefore">not Before time</param>
+        /// <param name="expires">expires</param>
+        /// <returns></returns>
+        public Token BuildJwtToken(Claim[] claims, DateTime notBefore, DateTime? expires = null)
+        {
+            return GenerateToken(claims, notBefore, expires, null);
+        }
+
+        /// <summary>
+        /// get the token of jwt
+        /// </summary>
+        /// <param name="claims">claim array</param>
+        /// <param name="ip">ip</param>
+        /// <param name="notBefore">not Before time</param>
+        /// <param name="expires">expires</param>
+        /// <returns></returns>
+        public Token BuildJwtToken(Claim[] claims, string ip, DateTime? notBefore = null, DateTime? expires = null)
+        {
+            return GenerateToken(claims, expires, notBefore, ip);
+        }
+
+        /// <summary>
+        /// generate token
+        /// </summary>
+        /// <param name="claims"></param>
+        /// <param name="notBefore"></param>
+        /// <param name="expires"></param>
+        /// <param name="ip"></param>
+        /// <returns></returns>
+        private Token GenerateToken(Claim[] claims, DateTime? notBefore = null,
+            DateTime? expires = null, string ip = "")
+        {
             var claimList = new List<Claim>(claims);
-            var now = DateTime.UtcNow;
+            if (!string.IsNullOrEmpty(ip))
+            {
+                claimList.Add(new Claim("ip", ip));
+            }
+
+            var now = notBefore ?? DateTime.UtcNow;
             var jwt = new JwtSecurityToken(
                 issuer: _jwtAuthorizationRequirement.Issuer,
                 audience: _jwtAuthorizationRequirement.Audience,
@@ -50,65 +95,7 @@ namespace Ocelot.JwtAuthorize
             };
             return responseJson;
         }
-        /// <summary>
-        /// get the token of jwt
-        /// </summary>
-        /// <param name="claims">claim array</param>
-        /// <param name="notBefore">not Before time</param>
-        /// <param name="expires">expires</param>
-        /// <returns></returns>
-        public Token BuildJwtToken(Claim[] claims, DateTime notBefore, DateTime? expires = null)
-        {
-            var claimList = new List<Claim>(claims);
-            var jwt = new JwtSecurityToken(
-                issuer: _jwtAuthorizationRequirement.Issuer,
-                audience: _jwtAuthorizationRequirement.Audience,
-                claims: claimList.ToArray(),
-                notBefore: notBefore,
-                expires: expires,
-                signingCredentials: _jwtAuthorizationRequirement.SigningCredentials
-            );
-            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
-            var responseJson = new Token
-            {
-                TokenValue = encodedJwt,
-                Expires = expires,
-                TokenType = "Bearer"
-            };
-            return responseJson;
-        }
-   
-        /// <summary>
-        /// get the token of jwt
-        /// </summary>
-        /// <param name="claims">claim array</param>
-        /// <param name="ip">ip</param>
-        /// <param name="notBefore">not Before time</param>
-        /// <param name="expires">expires</param>
-        /// <returns></returns>
-        public Token BuildJwtToken(Claim[] claims, string ip, DateTime? notBefore = null, DateTime? expires = null)
-        {
-           
-            var claimList = new List<Claim>(claims);
-            claimList.Add(new Claim("ip", ip));
-            var now = notBefore.HasValue ? notBefore.Value : DateTime.UtcNow;
-            var jwt = new JwtSecurityToken(
-                issuer: _jwtAuthorizationRequirement.Issuer,
-                audience: _jwtAuthorizationRequirement.Audience,
-                claims: claimList.ToArray(),
-                notBefore: notBefore,
-                expires: expires,
-                signingCredentials: _jwtAuthorizationRequirement.SigningCredentials
-            );
-            var encodedJwt = new JwtSecurityTokenHandler().WriteToken(jwt);
-            var responseJson = new Token
-            {
-                TokenValue = encodedJwt,
-                Expires = expires,
-                TokenType = "Bearer"
-            };
-            return responseJson;
-        }
+
         /// <summary>
         /// back token
         /// </summary>
@@ -117,18 +104,17 @@ namespace Ocelot.JwtAuthorize
             /// <summary>
             /// Token Value
             /// </summary>
-            public string TokenValue
-            { get; set; }
+            public string TokenValue { get; set; }
+
             /// <summary>
             /// Expires (unit second)
             /// </summary>
-            public DateTime? Expires
-            { get; set; }
+            public DateTime? Expires { get; set; }
+
             /// <summary>
             /// token type
             /// </summary>
-            public string TokenType
-            { get; set; }
+            public string TokenType { get; set; }
         }
     }
 }
